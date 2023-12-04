@@ -11,8 +11,11 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING") // uses a direct connection
 }
 
-model User {
+model Device {
   id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  serial_number String  @unique
+  product_id  String
+  scenario  String
+  new  Boolean
+  created  String
 }
