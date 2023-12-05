@@ -12,10 +12,9 @@ datasource db {
 }
 
 model Device {
-  id    Int     @id @default(autoincrement())
+  id    String     @id @default(uuid())
   serial_number String  @unique
   product_id  String
-  scenario  String
-  new  Boolean
-  created  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

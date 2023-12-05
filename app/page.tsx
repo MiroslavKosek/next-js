@@ -1,20 +1,23 @@
 "use client";
-import dynamic from 'next/dynamic'
 import { Menubar } from 'primereact/menubar';
 import { PrimeReactContext } from 'primereact/api';
+import { classNames } from 'primereact/utils';
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { InputSwitch } from 'primereact/inputswitch';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
+import { Dialog } from 'primereact/dialog';
+import { Toast } from 'primereact/toast';
+import { InputText } from 'primereact/inputtext';
+import { Toolbar } from 'primereact/toolbar';
+import { ProgressSpinner } from 'primereact/progressspinner';
 
 interface Device {
-  id: number | null;
+  id: string | null;
   serial_number: string;
   product_id: string;
-  scenario: string;
-  new: boolean;
-  created: string;
+  createdAt: Date | null;
 }
 
 export default function Home() {
@@ -22,14 +25,26 @@ export default function Home() {
     id: null,
     serial_number: '',
     product_id: '',
-    scenario: '',
-    new: true,
-    created: '2023-12-04T19:07:17.428Z'
+    createdAt: null
   };
 
-  const [devices, setDevices] = useState<Device[]>([{id: 1, serial_number: 'FCW2718Y5ZN', product_id: 'IR1101-K9', scenario: 'devel1', created: '2023-12-04T19:07:17.428Z', new: true}]);
-  const [globalFilter, setGlobalFilter] = useState<string>('');
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [deviceDialog, setDeviceDialog] = useState<boolean>(false);
+  const [deleteDeviceDialog, setDeleteDeviceDialog] = useState<boolean>(false);
+  const [device, setDevice] = useState<Device>(emptyDevice);
+  const [submitted, setSubmitted] = useState<boolean>(false);
   const dt = useRef<DataTable<Device[]>>(null);
+  const toast = useRef<Toast>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/devices')
+      .then((response) => response.json())
+      .then((data) => {
+        setDevices(data)
+        setLoading(false);
+      });
+  }, []);
 
   const { changeTheme } = useContext(PrimeReactContext);
 
@@ -46,17 +61,117 @@ export default function Home() {
     }
   };
 
+  const confirmDeleteDevice = (device: Device) => {
+    setDevice(device);
+    setDeleteDeviceDialog(true);
+  };
+
+  const deleteDevice = () => {
+    setLoading(true)
+    fetch(`/api/devices`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({id: device.id})
+    })
+      .then((response) => response.json())
+      .then((deletedDevice) => {
+        setDevices(devices.filter((device) => device.id !== deletedDevice.id));
+        fetch('/api/devices')
+          .then((response) => response.json())
+          .then((data) => {
+            setDevices(data)
+            setLoading(false);
+          });
+        hideDeleteDeviceDialog()
+        toast.current?.show({ severity: 'success', summary: 'Successful', detail: 'Device Deleted', life: 3000 });
+      });
+  };
+
+  const hideDeleteDeviceDialog = () => {
+    setDeleteDeviceDialog(false);
+  };
+
   const start = <img alt="logo" src="https://primefaces.org/cdn/primereact/images/logo.png" height="40" className="mr-2"></img>
   const end = <div className="flex justify-content-center align-items-center"><i className="pi pi-sun mx-2"></i><InputSwitch checked={checked} onChange={(e) => Theme(e.value)} /><i className="pi pi-moon mx-2"></i></div>
   
   const actionBodyTemplate = (rowData: Device) => {
     return (
         <React.Fragment>
-            <Button icon="pi pi-pencil" rounded outlined className="mr-2" onClick={() => editDevice(rowData)} />
             <Button icon="pi pi-trash" rounded outlined severity="danger" onClick={() => confirmDeleteDevice(rowData)} />
         </React.Fragment>
     );
-};
+  };
+
+  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>, name: string) => {
+    const val = (e.target && e.target.value) || '';
+    let _device = { ...device };
+
+    // @ts-ignore
+    _device[`${name}`] = val;
+
+    setDevice(_device);
+  };
+
+  const deleteDeviceDialogFooter = (
+    <React.Fragment>
+        <Button label="No" icon="pi pi-times" outlined onClick={hideDeleteDeviceDialog} />
+        <Button label="Yes" icon="pi pi-check" severity="danger" onClick={deleteDevice} />
+    </React.Fragment>
+  );
+
+  const openNew = () => {
+    setDevice(emptyDevice);
+    setSubmitted(false);
+    setDeviceDialog(true);
+  };
+
+  const saveDevice = () => {
+    setSubmitted(true);
+    setLoading(true)
+
+    fetch('/api/devices', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ serial_number: device.serial_number, product_id: device.product_id }),
+    })
+      .then((response) => response.json())
+      .then((createdDevice) => {
+        setDevices([...devices, createdDevice]);
+        setDevice({ id: '', serial_number: '', product_id: '', createdAt: null });
+        fetch('/api/devices')
+          .then((response) => response.json())
+          .then((data) => {
+            setDevices(data)
+            setLoading(false);
+          });
+        hideDialog()
+        toast.current?.show({ severity: 'success', summary: 'Successful', detail: 'Device Created', life: 3000 });
+      });
+  };
+
+  const hideDialog = () => {
+    setSubmitted(false);
+    setDeviceDialog(false);
+  };
+
+  const leftToolbarTemplate = () => {
+    return (
+        <div className="flex flex-wrap gap-2">
+            <Button label="New" icon="pi pi-plus" severity="success" onClick={openNew} />
+        </div>
+    );
+  };
+
+  const deviceDialogFooter = (
+    <React.Fragment>
+        <Button label="Cancel" icon="pi pi-times" outlined onClick={hideDialog} />
+        <Button label="Save" icon="pi pi-check" onClick={saveDevice} />
+    </React.Fragment>
+);
 
   return (
     <div>
@@ -65,19 +180,53 @@ export default function Home() {
         <div className="row">
           <div className="flex-auto w-full">
             <h1>Devices</h1>
+            <Toast ref={toast} />
             <div className="card">
-                <DataTable ref={dt} value={devices}
-                        dataKey="id"  paginator rows={10} rowsPerPageOptions={[5, 10, 25]}
-                        paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
-                        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} devices" globalFilter={globalFilter}>
-                    <Column field="serial_number" header="Serial Number" sortable></Column>
-                    <Column field="product_id" header="Product ID" sortable></Column>
-                    <Column field="scenario" header="Scenario" sortable></Column>
-                    <Column field="created" header="Created" sortable></Column>
-                    <Column field="new" header="New" sortable></Column>
-                    <Column body={actionBodyTemplate} exportable={false}></Column>
-                </DataTable>
+              {loading ? (
+                <div className="flex justify-content-center flex-wrap">
+                  <ProgressSpinner style={{width: '50px', height: '50px'}} strokeWidth="8" fill="var(--surface-ground)" animationDuration=".5s" />
+                </div>
+              ) : (
+                <div>
+                  <Toolbar className="mb-4" left={leftToolbarTemplate}></Toolbar>
+                  <DataTable ref={dt} value={devices}
+                          dataKey="id"  paginator rows={5} rowsPerPageOptions={[5, 10, 25]}
+                          paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
+                          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} devices">
+                      <Column field="serial_number" header="Serial Number" sortable></Column>
+                      <Column field="product_id" header="Product ID" sortable></Column>
+                      <Column field="createdAt" header="Created" sortable></Column>
+                      <Column body={actionBodyTemplate} exportable={false}></Column>
+                  </DataTable>
+                </div>
+              )}
             </div>
+            <Dialog visible={deviceDialog} style={{ width: '32rem' }} breakpoints={{ '960px': '75vw', '641px': '90vw' }} header="Device Details" modal className="p-fluid" footer={deviceDialogFooter} onHide={hideDialog}>
+                <div className="field">
+                    <label htmlFor="serial_number" className="font-bold">
+                        Serial Number
+                    </label>
+                    <InputText id="serial_number" value={device.serial_number} onChange={(e) => onInputChange(e, 'serial_number')} required autoFocus className={classNames({ 'p-invalid': submitted && !device.serial_number })} />
+                    {submitted && !device.serial_number && <small className="p-error">Serial Number is required.</small>}
+                </div>
+                <div className="field">
+                    <label htmlFor="product_id" className="font-bold">
+                        Product ID
+                    </label>
+                    <InputText id="product_id" value={device.product_id} onChange={(e) => onInputChange(e, 'product_id')} required className={classNames({ 'p-invalid': submitted && !device.product_id })} />
+                    {submitted && !device.product_id && <small className="p-error">Product ID is required.</small>}
+                </div>
+            </Dialog>
+            <Dialog visible={deleteDeviceDialog} style={{ width: '32rem' }} breakpoints={{ '960px': '75vw', '641px': '90vw' }} header="Confirm" modal footer={deleteDeviceDialogFooter} onHide={hideDeleteDeviceDialog}>
+                <div className="confirmation-content">
+                    <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
+                    {device && (
+                        <span>
+                            Are you sure you want to delete <b>{device.serial_number}</b>?
+                        </span>
+                    )}
+                </div>
+            </Dialog>
           </div>
         </div>
       </div>
