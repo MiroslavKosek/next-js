@@ -1,7 +1,6 @@
-import { NextApiRequest, NextApiResponse } from "next";
 import prisma from "../../../lib/prisma";
 
-export async function GET(req: NextApiRequest, res: NextApiResponse) {
+export async function GET(req: Request, res: Response) {
   const devices = await prisma.device.findMany({
     select: {
       id: true,
@@ -18,7 +17,7 @@ export async function GET(req: NextApiRequest, res: NextApiResponse) {
   });
 }
 
-export async function POST(req: Request, res: NextApiResponse) {
+export async function POST(req: Request, res: Response) {
   const body = await req.json()
   const user = await prisma.device.create({
     data: {
@@ -34,7 +33,7 @@ export async function POST(req: Request, res: NextApiResponse) {
   });
 }
 
-export async function DELETE(req: Request, res: NextApiResponse) {
+export async function DELETE(req: Request, res: Response) {
   const body = await req.json()
   const device = await prisma.device.delete({
     where: { id: body.id}
