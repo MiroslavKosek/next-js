@@ -43,6 +43,9 @@ export default function Home() {
       .then((data) => {
         setDevices(data)
         setLoading(false);
+        if (data.message) {
+          toast.current?.show({ severity: 'error', summary: 'Error', detail: data.message, life: 3000 });
+        }
       });
   }, []);
 
@@ -68,6 +71,7 @@ export default function Home() {
 
   const deleteDevice = () => {
     setLoading(true)
+    var status = 200
     fetch(`/api/devices`, {
       method: 'DELETE',
       headers: {
@@ -75,17 +79,31 @@ export default function Home() {
       },
       body: JSON.stringify({id: device.id})
     })
-      .then((response) => response.json())
+      .then((response) => {
+        status = response.status
+        return response.json()
+      })
       .then((deletedDevice) => {
         setDevices(devices.filter((device) => device.id !== deletedDevice.id));
         fetch('/api/devices')
-          .then((response) => response.json())
+          .then((response) => {
+            status = response.status
+            return response.json()
+          })
           .then((data) => {
             setDevices(data)
             setLoading(false);
+            if (data.message) {
+              toast.current?.show({ severity: 'error', summary: 'Error', detail: data.message, life: 3000 });
+            }
           });
         hideDeleteDeviceDialog()
-        toast.current?.show({ severity: 'success', summary: 'Successful', detail: 'Device Deleted', life: 3000 });
+        if (status != 200) {
+          toast.current?.show({ severity: 'error', summary: 'Error', detail: deletedDevice.message, life: 3000 });
+        }
+        else {
+          toast.current?.show({ severity: 'success', summary: 'Successful', detail: deletedDevice.message, life: 3000 });
+        }
       });
   };
 
@@ -147,9 +165,17 @@ export default function Home() {
           .then((data) => {
             setDevices(data)
             setLoading(false);
+            if (data.message) {
+              toast.current?.show({ severity: 'error', summary: 'Error', detail: data.message, life: 3000 });
+            }
           });
         hideDialog()
-        toast.current?.show({ severity: 'success', summary: 'Successful', detail: 'Device Created', life: 3000 });
+        if (createdDevice.id) {
+          toast.current?.show({ severity: 'success', summary: 'Successful', detail: 'Device Created: ' + createdDevice.id, life: 3000 });
+        }
+        else {
+          toast.current?.show({ severity: 'error', summary: 'Error', detail: createdDevice.message, life: 3000 });
+        }
       });
   };
 
