@@ -1,9 +1,6 @@
 "use client";
-import { Menubar } from 'primereact/menubar';
-import { PrimeReactContext } from 'primereact/api';
 import { classNames } from 'primereact/utils';
-import React, { useContext, useState, useEffect, useRef } from 'react';
-import { InputSwitch } from 'primereact/inputswitch';
+import React, { useState, useEffect, useRef } from 'react';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
@@ -12,13 +9,8 @@ import { Toast } from 'primereact/toast';
 import { InputText } from 'primereact/inputtext';
 import { Toolbar } from 'primereact/toolbar';
 import { ProgressSpinner } from 'primereact/progressspinner';
-
-interface Device {
-  id: string | null;
-  serial_number: string;
-  product_id: string;
-  createdAt: Date | null;
-}
+import Navbar from './components/Navbar';
+import Device from './models/Device';
 
 export default function Home() {
   let emptyDevice: Device = {
@@ -48,21 +40,6 @@ export default function Home() {
         }
       });
   }, []);
-
-  const { changeTheme } = useContext(PrimeReactContext);
-
-  const [checked, setChecked] = useState(true);
-
-  const Theme = (theme: boolean) => {
-    if (theme) {
-      setChecked(theme)
-      changeTheme?.('lara-light-blue', 'lara-dark-blue', 'app-theme', () => {console.log('dark')})
-    }
-    else {
-      setChecked(theme)
-      changeTheme?.('lara-dark-blue', 'lara-light-blue', 'app-theme', () => {console.log('light')})
-    }
-  };
 
   const confirmDeleteDevice = (device: Device) => {
     setDevice(device);
@@ -111,8 +88,6 @@ export default function Home() {
     setDeleteDeviceDialog(false);
   };
 
-  const start = <img alt="logo" src="https://primefaces.org/cdn/primereact/images/logo.png" height="40" className="mr-2"></img>
-  const end = <div className="flex justify-content-center align-items-center"><i className="pi pi-sun mx-2"></i><InputSwitch checked={checked} onChange={(e) => Theme(e.value)} /><i className="pi pi-moon mx-2"></i></div>
   
   const actionBodyTemplate = (rowData: Device) => {
     return (
@@ -197,11 +172,11 @@ export default function Home() {
         <Button label="Cancel" icon="pi pi-times" outlined onClick={hideDialog} />
         <Button label="Save" icon="pi pi-check" onClick={saveDevice} />
     </React.Fragment>
-);
+  );
 
   return (
-    <div>
-      <Menubar start={start} end={end} />
+    <>
+      <Navbar />
       <div className="m-3">
         <div className="row">
           <div className="flex-auto w-full">
@@ -256,6 +231,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

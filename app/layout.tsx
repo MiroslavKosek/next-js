@@ -4,7 +4,7 @@ import './globals.css'
 import 'primeicons/primeicons.css';
 import 'primereact/resources/primereact.min.css';
 import 'primeflex/primeflex.css';
-import { PrimeReactProvider, PrimeReactContext } from 'primereact/api';
+import { PrimeReactProvider } from 'primereact/api';
 
 const inter = Inter({ subsets: ['latin'] })
 
